@@ -1,6 +1,9 @@
 import { makeAutoObservable } from "mobx";
-import type { Cordinate, IPiece } from "../types/chess-types";
+import { type Cordinate, type File, type IPiece, type PieceColor, Cordinate } from '../types/chess-types';
+import { Rook } from "../types/figure/rook/rook";
+import { Pawn } from "../types/figure/pawn/pawn";
 
+export const files: File[] = ["A", "B", "C", "D", "E", "F", "G", "H"] as const;
 class User {
     public name: string;
     public color: PieceColor;
@@ -15,79 +18,96 @@ class User {
     }
 }
 
+export class Board {
+    private readonly map: Map<Cordinate, IPiece> = new Map();
+
+    public constructor(pieces: IPiece[]) {
+        pieces.forEach((piece) => {
+            this.map.set(piece.cordinate, piece)
+        })
+    }
+    public isEmpty(cordinate: Cordinate) {
+        return !!this.map.get(cordinate)
+    }
+    public getPiece(cordinate: Cordinate) {
+        return this.map.get(cordinate)
+    }
+
+}
 export class ChessStore {
-    board: Map<Cordinate, IPiece> = new Map();
+    board: Board;
     selectedPiece: IPiece | null = null;
     possibleMoves: Cordinate[] | null = null;
 
     constructor() {
         makeAutoObservable(this);
-        this.initialBoard()
+        const pieces: IPiece[] = this.createPieces();
+        this.board = new Board(pieces);
     }
-    initialBoard() {
-        this.board.set({ file: "A", rank: 1 }, { name: "rook", color: "black", cordinate: { file: "A", rank: 1 } })
-        this.board.set({ file: "B", rank: 1 }, { name: "knight", color: "black", cordinate: { file: "B", rank: 1 } })
-        this.board.set({ file: "C", rank: 1 }, { name: "bishop", color: "black", cordinate: { file: "C", rank: 1 } })
-        this.board.set({ file: "D", rank: 1 }, { name: "queen", color: "black", cordinate: { file: "D", rank: 1 } })
-        this.board.set({ file: "E", rank: 1 }, { name: "king", color: "black", cordinate: { file: "E", rank: 1 } })
-        this.board.set({ file: "F", rank: 1 }, { name: "bishop", color: "black", cordinate: { file: "F", rank: 1 } })
-        this.board.set({ file: "G", rank: 1 }, { name: "knight", color: "black", cordinate: { file: "G", rank: 1 } })
-        this.board.set({ file: "H", rank: 1 }, { name: "rook", color: "black", cordinate: { file: "H", rank: 1 } })
 
-        for (const file of files) {
-            this.board.set({ file: file, rank: 2 }, { name: "pawn", color: "black", cordinate: { file: file, rank: 2 } })
-        }
-        for (const file of files) {
-            this.board.set({ file: file, rank: 7 }, { name: "pawn", color: "white", cordinate: { file: file, rank: 7 } })
-        }
-        this.board.set({ file: "A", rank: 8 }, { name: "rook", color: "black", cordinate: { file: "A", rank: 8 } })
-        this.board.set({ file: "B", rank: 8 }, { name: "knight", color: "black", cordinate: { file: "B", rank: 8 } })
-        this.board.set({ file: "C", rank: 8 }, { name: "bishop", color: "black", cordinate: { file: "C", rank: 8 } })
-        this.board.set({ file: "D", rank: 8 }, { name: "queen", color: "black", cordinate: { file: "D", rank: 8 } })
-        this.board.set({ file: "E", rank: 8 }, { name: "king", color: "black", cordinate: { file: "E", rank: 8 } })
-        this.board.set({ file: "F", rank: 8 }, { name: "bishop", color: "black", cordinate: { file: "F", rank: 8 } })
-        this.board.set({ file: "G", rank: 8 }, { name: "knight", color: "black", cordinate: { file: "G", rank: 8 } })
-        this.board.set({ file: "H", rank: 8 }, { name: "rook", color: "black", cordinate: { file: "H", rank: 8 } })
-    }
     //выбор пешки
     setSelectedPiece(cordinate: Cordinate) {
         //есть ли фигура на данной кординате
-        const piece = this.board.get(cordinate);
-        piece.
+        const piece = this.board.getPiece(cordinate);
 
-            //если нет фигуры и ранее выбранной тоже(нажатие в пустоту)
-            if(!piece && !this.selectedPiece) {
+        //если нет пешки и ранее выбранной тоже, то нажатие в пустоту
+        if (!piece && !this.selectedPiece) {
             return
         }
-        //если нет ранее выбранной тоже,но есть фигура
+        //если нет ранее выбранной тоже,но есть пешка, простое нажатие на пешку делает ее активной
         if (!this.selectedPiece && !!piece) {
             this.selectedPiece = piece;
-            this.setPossibleMoves(cordinate, piece)
+            this.board.getPiece(piece.cordinate)?.getPossibleMoves()
         }
-        //если есть ранее выбранная и фигура
-        if (!!this.selectedPiece && !!piece) {
-            //выбранная ранее фишка
+        else {
+            //если есть ранее выбранная пешка, но нажал на пустую клетку, то перемещаем ее туда вызов setPosible и Move
+            if (!!this.selectedPiece && !piece)
+                this.selectedPiece = { ...this.selectedPiece, cordinate: cordinate };
 
-            // если цвет совпадает
-            if (piece.color == this.selectedPiece.color) {
-                this.selectedPiece.cordinate = cordinate;
-                this.setPossibleMoves(cordinate, piece!)
-            }
-            // если цвет не совпадает
+
+            //если есть ранее выбранная пешка и нажал на другую пешку(!!this.selectedPiece && !!piece)
             else {
-                this.movePiece()
+                this.board.getPiece(piece.cordinate)
             }
         }
 
 
     }
-    setPossibleMoves(cordinate: Cordinate, figure: IPiece) {
-        if (figure.name = "rook") {
-            this.board
-        }
-    }
+    //доступные шаги
+
     //двигаем пешки
     movePiece() {
 
     }
+
+    private createPieces() {
+        const pieces: IPiece[] = [];
+        pieces.push(
+            new Rook("black", { file: "A", rank: 1 }),
+            new Knight("black", { file: "B", rank: 1 }),
+            new Bishop("black", { file: "C", rank: 1 }),
+            new Queen("black", { file: "D", rank: 1 }),
+            new King("black", { file: "E", rank: 1 }),
+            new Bishop("black", { file: "F", rank: 1 }),
+            new Knight("black", { file: "G", rank: 1 }),
+            new Rook("black", { file: "H", rank: 1 }))
+        files.forEach((file) => {
+            pieces.push(new Pawn("black", { file: file, rank: 2 }))
+        });
+
+        files.forEach((file) => {
+            pieces.push(new Pawn("white", { file: file, rank: 7 }))
+        });
+        pieces.push(
+            new Rook("white", { file: "A", rank: 8 }),
+            new Knight("white", { file: "B", rank: 8 }),
+            new Bishop("white", { file: "C", rank: 8 }),
+            new Queen("white", { file: "D", rank: 8 }),
+            new King("white", { file: "E", rank: 8 }),
+            new Bishop("white", { file: "F", rank: 8 }),
+            new Knight("white", { file: "G", rank: 8 }),
+            new Rook("white", { file: "H", rank: 8 }))
+        return pieces
+    }
+
 };
